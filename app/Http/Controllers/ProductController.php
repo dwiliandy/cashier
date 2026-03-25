@@ -1,23 +1,27 @@
 <?php
 namespace App\Http\Controllers;
-use App\Models\Product;
-use App\Models\Category;
+use App\Services\ProductService;
+use App\Services\CategoryService;
 use App\Services\StockService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
-    public function index(Request $request)
+    public function __construct(
+        private ProductService $productService,
+        private CategoryService $categoryService,
+    ) {}
+
+    public function index()
     {
-        $products = Product::with('category')->latest()->get();
-        $categories = Category::active()->get();
+        $products = $this->productService->getAll();
+        $categories = $this->categoryService->getActive();
         return view('products.index', compact('products', 'categories'));
     }
 
     public function create()
     {
-        $categories = Category::active()->get();
+        $categories = $this->categoryService->getActive();
         return view('products.create', compact('categories'));
     }
 
@@ -42,17 +46,17 @@ class ProductController extends Controller
         }
         $v['is_active'] = $request->has('is_active');
 
-        Product::create($v);
+        $this->productService->create($v);
         return redirect()->route('products.index')->with('success', 'Produk berhasil ditambahkan!');
     }
 
-    public function edit(Product $product)
+    public function edit(\App\Models\Product $product)
     {
-        $categories = Category::active()->get();
+        $categories = $this->categoryService->getActive();
         return view('products.edit', compact('product', 'categories'));
     }
 
-    public function update(Request $request, Product $product)
+    public function update(Request $request, \App\Models\Product $product)
     {
         $v = $request->validate([
             'name' => 'required|string|max:255',
@@ -69,39 +73,32 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            if ($product->image) Storage::disk('public')->delete($product->image);
             $v['image'] = $request->file('image')->store('products', 'public');
         }
         $v['is_active'] = $request->has('is_active');
 
-        $product->update($v);
+        $this->productService->update($product, $v);
         return redirect()->route('products.index')->with('success', 'Produk berhasil diperbarui!');
     }
 
-    public function destroy(Product $product)
+    public function destroy(\App\Models\Product $product)
     {
-        if ($product->image) Storage::disk('public')->delete($product->image);
-        $product->delete();
+        $this->productService->delete($product);
         return redirect()->route('products.index')->with('success', 'Produk berhasil dihapus!');
     }
 
     // API for POS
     public function apiSearch(Request $request)
     {
-        $products = Product::active()
-            ->where('stock', '>', 0)
-            ->when($request->q, fn($q, $s) => $q->where('name', 'like', "%{$s}%")->orWhere('barcode', $s)->orWhere('sku', 'like', "%{$s}%"))
-            ->with('category')
-            ->limit(20)->get();
-        return response()->json($products);
+        return response()->json($this->productService->search($request->q));
     }
 
     public function apiAll()
     {
-        return response()->json(Product::active()->where('stock', '>', 0)->with('category')->get());
+        return response()->json($this->productService->getActiveInStock());
     }
 
-    public function adjustStock(Request $request, Product $product, StockService $stockService)
+    public function adjustStock(Request $request, \App\Models\Product $product, StockService $stockService)
     {
         $request->validate(['quantity' => 'required|integer|min:0', 'type' => 'required|in:in,out,adjustment', 'notes' => 'nullable|string']);
         $stockService->adjustStock($product, $request->quantity, $request->type, null, $request->notes);

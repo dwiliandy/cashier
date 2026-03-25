@@ -8,6 +8,8 @@ use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\StockBatchController;
+use App\Http\Controllers\ActivityLogController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn() => redirect()->route('login'));
@@ -31,6 +33,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('products', ProductController::class)->except('show');
         Route::post('products/{product}/stock', [ProductController::class, 'adjustStock'])->name('products.stock');
         Route::resource('categories', CategoryController::class)->except(['show', 'create', 'edit']);
+        Route::resource('stock-batches', StockBatchController::class)->except(['show', 'create', 'edit']);
     });
 
     // Members management (admin, owner, cashier)
@@ -46,6 +49,11 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin,owner')->prefix('reports')->name('reports.')->group(function () {
         Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
         Route::get('/stock', [ReportController::class, 'stock'])->name('stock');
+    });
+
+    // Activity Logs (owner only)
+    Route::middleware('role:owner')->group(function () {
+        Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
     });
 
     // POS (cashier, admin)

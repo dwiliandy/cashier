@@ -43,6 +43,15 @@
                             </tr>
                         @endforeach
                     </tbody>
+                    <tfoot>
+                        <tr>
+                            <th>Nama</th>
+                            <th>Telepon</th>
+                            <th>Email</th>
+                            <th>Poin</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
@@ -50,7 +59,11 @@
     @push('scripts')
     <script>
         $(document).ready(function() {
-            $('#members-table').DataTable({
+            $('#members-table tfoot th').each(function() {
+                var title = $(this).text();
+                if (title) $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+            });
+            var table = $('#members-table').DataTable({
                 dom: 'Bfrtip',
                 buttons: [
                     { extend: 'excelHtml5', text: '📊 Export Excel', title: 'Daftar Member', exportOptions: { columns: [0,1,2,3] } },
@@ -59,6 +72,12 @@
                 ],
                 language: { search: 'Cari:', lengthMenu: 'Tampilkan _MENU_ data', info: 'Menampilkan _START_ - _END_ dari _TOTAL_ member', infoEmpty: 'Tidak ada data', zeroRecords: 'Member tidak ditemukan', paginate: { first: '«', last: '»', previous: '‹', next: '›' } },
                 pageLength: 25,
+            });
+            table.columns().every(function() {
+                var that = this;
+                $('input', this.footer()).on('keyup change clear', function() {
+                    if (that.search() !== this.value) that.search(this.value).draw();
+                });
             });
         });
     </script>

@@ -26,6 +26,7 @@
                         <tr><td class="text-gray-900">{{ $sp->product_name }}</td><td class="text-center">{{ $sp->total_qty }}</td><td class="text-right font-semibold text-gray-900">Rp {{ number_format($sp->total_revenue, 0, ',', '.') }}</td></tr>
                     @endforeach
                 </tbody>
+                <tfoot><tr><th>Produk</th><th>Qty</th><th>Revenue</th></tr></tfoot>
             </table>
         </div>
         <div class="bg-white rounded-2xl border border-gray-200 p-5">
@@ -42,6 +43,7 @@
                         </tr>
                     @endforeach
                 </tbody>
+                <tfoot><tr><th>Invoice</th><th>Tanggal</th><th>Metode</th><th>Total</th></tr></tfoot>
             </table>
         </div>
     </div>
@@ -49,18 +51,32 @@
     @push('scripts')
     <script>
         $(document).ready(function() {
+            function setupColumnSearch(tableId) {
+                $(tableId + ' tfoot th').each(function() {
+                    var title = $(this).text();
+                    if (title) $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+                });
+            }
+            setupColumnSearch('#sales-product-table');
+            setupColumnSearch('#sales-tx-table');
+
             var dtOpts = {
                 dom: 'Bfrtip',
-                buttons: [
-                    { extend: 'excelHtml5', text: '📊 Excel', exportOptions: { columns: ':visible' } },
-                    { extend: 'pdfHtml5', text: '📄 PDF', exportOptions: { columns: ':visible' } },
-                    { extend: 'print', text: '🖨 Cetak', exportOptions: { columns: ':visible' } }
-                ],
                 language: { search:'Cari:', info:'_START_-_END_ / _TOTAL_', infoEmpty:'Kosong', zeroRecords:'Tidak ditemukan', paginate:{previous:'‹',next:'›'} },
                 pageLength: 25,
             };
-            $('#sales-product-table').DataTable({...dtOpts, buttons: [{extend:'excelHtml5',text:'📊 Excel',title:'Penjualan Per Produk'},{extend:'pdfHtml5',text:'📄 PDF',title:'Penjualan Per Produk'},{extend:'print',text:'🖨 Cetak',title:'Penjualan Per Produk'}], order:[[2,'desc']]});
-            $('#sales-tx-table').DataTable({...dtOpts, buttons: [{extend:'excelHtml5',text:'📊 Excel',title:'Daftar Transaksi'},{extend:'pdfHtml5',text:'📄 PDF',title:'Daftar Transaksi'},{extend:'print',text:'🖨 Cetak',title:'Daftar Transaksi'}], order:[[1,'desc']]});
+
+            var t1 = $('#sales-product-table').DataTable({...dtOpts, buttons: [{extend:'excelHtml5',text:'📊 Excel',title:'Penjualan Per Produk'},{extend:'pdfHtml5',text:'📄 PDF',title:'Penjualan Per Produk'},{extend:'print',text:'🖨 Cetak',title:'Penjualan Per Produk'}], order:[[2,'desc']]});
+            var t2 = $('#sales-tx-table').DataTable({...dtOpts, buttons: [{extend:'excelHtml5',text:'📊 Excel',title:'Daftar Transaksi'},{extend:'pdfHtml5',text:'📄 PDF',title:'Daftar Transaksi'},{extend:'print',text:'🖨 Cetak',title:'Daftar Transaksi'}], order:[[1,'desc']]});
+
+            [t1, t2].forEach(function(table) {
+                table.columns().every(function() {
+                    var that = this;
+                    $('input', this.footer()).on('keyup change clear', function() {
+                        if (that.search() !== this.value) that.search(this.value).draw();
+                    });
+                });
+            });
         });
     </script>
     @endpush

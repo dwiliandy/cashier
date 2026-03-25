@@ -69,13 +69,30 @@
                     </tr>
                 @endforeach
             </tbody>
+            <tfoot>
+                <tr>
+                    <th>Produk</th>
+                    <th>SKU</th>
+                    <th>Kategori</th>
+                    <th>Harga Beli</th>
+                    <th>Harga Jual</th>
+                    <th>Stok</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </tfoot>
         </table>
     </div>
 
     @push('scripts')
     <script>
         $(document).ready(function() {
-            $('#products-table').DataTable({
+            // Setup column search inputs
+            $('#products-table tfoot th').each(function() {
+                var title = $(this).text();
+                if (title) $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+            });
+            var table = $('#products-table').DataTable({
                 dom: 'Bfrtip',
                 buttons: [
                     { extend: 'excelHtml5', text: '📊 Export Excel', title: 'Daftar Produk', exportOptions: { columns: [0,1,2,3,4,5,6] } },
@@ -85,6 +102,13 @@
                 language: { search: 'Cari:', lengthMenu: 'Tampilkan _MENU_ data', info: 'Menampilkan _START_ - _END_ dari _TOTAL_ produk', infoEmpty: 'Tidak ada data', zeroRecords: 'Produk tidak ditemukan', paginate: { first: '«', last: '»', previous: '‹', next: '›' } },
                 pageLength: 25,
                 order: [[0, 'asc']],
+            });
+            // Per-column search
+            table.columns().every(function() {
+                var that = this;
+                $('input', this.footer()).on('keyup change clear', function() {
+                    if (that.search() !== this.value) that.search(this.value).draw();
+                });
             });
         });
     </script>

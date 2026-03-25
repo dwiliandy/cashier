@@ -41,12 +41,27 @@
                     </tr>
                 @endforeach
             </tbody>
+            <tfoot>
+                <tr>
+                    <th>Produk</th>
+                    <th>Kategori</th>
+                    <th>SKU</th>
+                    <th>Stok</th>
+                    <th>Min. Stok</th>
+                    <th>Satuan</th>
+                    <th>Status</th>
+                </tr>
+            </tfoot>
         </table>
     </div>
     @push('scripts')
     <script>
         $(document).ready(function() {
-            $('#stock-table').DataTable({
+            $('#stock-table tfoot th').each(function() {
+                var title = $(this).text();
+                if (title) $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+            });
+            var table = $('#stock-table').DataTable({
                 dom: 'Bfrtip',
                 buttons: [
                     { extend: 'excelHtml5', text: '📊 Export Excel', title: 'Laporan Stok', exportOptions: { columns: [0,1,2,3,4,5,6] } },
@@ -56,6 +71,12 @@
                 language: { search: 'Cari:', lengthMenu: 'Tampilkan _MENU_ data', info: 'Menampilkan _START_ - _END_ dari _TOTAL_ produk', infoEmpty: 'Tidak ada data', zeroRecords: 'Tidak ditemukan', paginate: { previous: '‹', next: '›' } },
                 pageLength: 50,
                 order: [[3, 'asc']],
+            });
+            table.columns().every(function() {
+                var that = this;
+                $('input', this.footer()).on('keyup change clear', function() {
+                    if (that.search() !== this.value) that.search(this.value).draw();
+                });
             });
         });
     </script>

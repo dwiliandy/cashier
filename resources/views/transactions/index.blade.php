@@ -36,12 +36,29 @@
                     </tr>
                 @endforeach
             </tbody>
+            <tfoot>
+                <tr>
+                    <th>Invoice</th>
+                    <th>Tanggal</th>
+                    <th>Kasir</th>
+                    <th>Member</th>
+                    <th>Subtotal</th>
+                    <th>Diskon</th>
+                    <th>Total</th>
+                    <th>Metode</th>
+                    <th></th>
+                </tr>
+            </tfoot>
         </table>
     </div>
     @push('scripts')
     <script>
         $(document).ready(function() {
-            $('#transactions-table').DataTable({
+            $('#transactions-table tfoot th').each(function() {
+                var title = $(this).text();
+                if (title) $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+            });
+            var table = $('#transactions-table').DataTable({
                 dom: 'Bfrtip',
                 buttons: [
                     { extend: 'excelHtml5', text: '📊 Export Excel', title: 'Riwayat Transaksi', exportOptions: { columns: [0,1,2,3,4,5,6,7] } },
@@ -51,6 +68,12 @@
                 language: { search: 'Cari:', lengthMenu: 'Tampilkan _MENU_ data', info: 'Menampilkan _START_ - _END_ dari _TOTAL_ transaksi', infoEmpty: 'Tidak ada data', zeroRecords: 'Transaksi tidak ditemukan', paginate: { first: '«', last: '»', previous: '‹', next: '›' } },
                 pageLength: 25,
                 order: [[1, 'desc']],
+            });
+            table.columns().every(function() {
+                var that = this;
+                $('input', this.footer()).on('keyup change clear', function() {
+                    if (that.search() !== this.value) that.search(this.value).draw();
+                });
             });
         });
     </script>

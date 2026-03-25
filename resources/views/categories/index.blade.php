@@ -39,15 +39,33 @@
                         </tr>
                     @endforeach
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <th>Nama</th>
+                        <th>Deskripsi</th>
+                        <th>Jumlah Produk</th>
+                        <th></th>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>
     @push('scripts')
     <script>
         $(document).ready(function() {
-            $('#categories-table').DataTable({
+            $('#categories-table tfoot th').each(function() {
+                var title = $(this).text();
+                if (title) $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+            });
+            var table = $('#categories-table').DataTable({
                 language: { search:'Cari:', info:'_TOTAL_ kategori', infoEmpty:'Kosong', zeroRecords:'Tidak ditemukan', paginate:{previous:'‹',next:'›'} },
                 pageLength: 25,
+            });
+            table.columns().every(function() {
+                var that = this;
+                $('input', this.footer()).on('keyup change clear', function() {
+                    if (that.search() !== this.value) that.search(this.value).draw();
+                });
             });
         });
     </script>

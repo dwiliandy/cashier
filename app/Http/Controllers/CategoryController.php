@@ -1,33 +1,37 @@
 <?php
 namespace App\Http\Controllers;
-use App\Models\Category;
+use App\Services\CategoryService;
 use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
+    public function __construct(
+        private CategoryService $categoryService,
+    ) {}
+
     public function index()
     {
-        $categories = Category::withCount('products')->latest()->get();
+        $categories = $this->categoryService->getAll();
         return view('categories.index', compact('categories'));
     }
 
     public function store(Request $request)
     {
         $request->validate(['name' => 'required|string|max:255', 'description' => 'nullable|string']);
-        Category::create($request->only('name', 'description'));
+        $this->categoryService->create($request->only('name', 'description'));
         return back()->with('success', 'Kategori berhasil ditambahkan!');
     }
 
-    public function update(Request $request, Category $category)
+    public function update(Request $request, \App\Models\Category $category)
     {
         $request->validate(['name' => 'required|string|max:255', 'description' => 'nullable|string']);
-        $category->update($request->only('name', 'description'));
+        $this->categoryService->update($category, $request->only('name', 'description'));
         return back()->with('success', 'Kategori berhasil diperbarui!');
     }
 
-    public function destroy(Category $category)
+    public function destroy(\App\Models\Category $category)
     {
-        $category->delete();
+        $this->categoryService->delete($category);
         return back()->with('success', 'Kategori berhasil dihapus!');
     }
 }
