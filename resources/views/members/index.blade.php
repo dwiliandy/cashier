@@ -48,7 +48,12 @@
                             <th>Nama</th>
                             <th>Telepon</th>
                             <th>Email</th>
-                            <th>Poin</th>
+                            <th>
+                                <div class="dt-range-wrap">
+                                    <input type="number" class="dt-range-min" placeholder="Min">
+                                    <input type="number" class="dt-range-max" placeholder="Max">
+                                </div>
+                            </th>
                             <th></th>
                         </tr>
                     </tfoot>
@@ -59,10 +64,25 @@
     @push('scripts')
     <script>
         $(document).ready(function() {
-            $('#members-table tfoot th').each(function() {
+            $('#members-table tfoot th').each(function(i) {
                 var title = $(this).text();
-                if (title) $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+                if (i <= 2) {
+                    $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+                }
             });
+
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                if (settings.nTable.id !== 'members-table') return true;
+                
+                var min = parseInt($('#members-table tfoot .dt-range-min').val(), 10);
+                var max = parseInt($('#members-table tfoot .dt-range-max').val(), 10);
+                var val = parseFloat(data[3].replace(/[^\d]/g, '')) || 0;
+
+                if (!isNaN(min) && val < min) return false;
+                if (!isNaN(max) && val > max) return false;
+                return true;
+            });
+
             var table = $('#members-table').DataTable({
                 dom: 'Bfrtip',
                 buttons: [
@@ -72,12 +92,18 @@
                 ],
                 language: { search: 'Cari:', lengthMenu: 'Tampilkan _MENU_ data', info: 'Menampilkan _START_ - _END_ dari _TOTAL_ member', infoEmpty: 'Tidak ada data', zeroRecords: 'Member tidak ditemukan', paginate: { first: '«', last: '»', previous: '‹', next: '›' } },
                 pageLength: 25,
+                scrollX: true
             });
+
             table.columns().every(function() {
                 var that = this;
-                $('input', this.footer()).on('keyup change clear', function() {
+                $('input.dt-column-search', this.footer()).on('keyup change clear', function() {
                     if (that.search() !== this.value) that.search(this.value).draw();
                 });
+            });
+
+            $('.dt-range-min, .dt-range-max').on('keyup change clear', function() {
+                table.draw();
             });
         });
     </script>

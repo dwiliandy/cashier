@@ -80,9 +80,21 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <th>Waktu</th>
+                    <th>
+                        <div class="dt-range-wrap">
+                            <input type="date" class="dt-date-min">
+                            <input type="date" class="dt-date-max">
+                        </div>
+                    </th>
                     <th>User</th>
-                    <th>Aksi</th>
+                    <th>
+                        <select class="dt-filter-select">
+                            <option value="">Semua</option>
+                            @foreach($actions as $act)
+                                <option value="{{ $act }}">{{ $act }}</option>
+                            @endforeach
+                        </select>
+                    </th>
                     <th>Deskripsi</th>
                     <th>Model</th>
                     <th>IP Address</th>
@@ -94,10 +106,28 @@
     @push('scripts')
     <script>
         $(document).ready(function() {
-            $('#logs-table tfoot th').each(function() {
+            $('#logs-table tfoot th').each(function(i) {
                 var title = $(this).text();
-                if (title) $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+                if ([1,3,4,5].includes(i)) {
+                    $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+                }
             });
+
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                if (settings.nTable.id !== 'logs-table') return true;
+                
+                var dMin = $('#logs-table tfoot .dt-date-min').val();
+                var dMax = $('#logs-table tfoot .dt-date-max').val();
+                var dValStr = data[0].split(' ')[0];
+                var parts = dValStr.split('/');
+                if (parts.length === 3) {
+                    var dVal = parts[2] + '-' + parts[1] + '-' + parts[0];
+                    if (dMin && dVal < dMin) return false;
+                    if (dMax && dVal > dMax) return false;
+                }
+                return true;
+            });
+
             var table = $('#logs-table').DataTable({
                 dom: 'Bfrtip',
                 buttons: [
@@ -108,12 +138,22 @@
                 language: { search: 'Cari:', lengthMenu: 'Tampilkan _MENU_ data', info: 'Menampilkan _START_ - _END_ dari _TOTAL_ log', infoEmpty: 'Tidak ada data', zeroRecords: 'Log tidak ditemukan', paginate: { first: '«', last: '»', previous: '‹', next: '›' } },
                 pageLength: 50,
                 order: [[0, 'desc']],
+                scrollX: true
             });
+
             table.columns().every(function() {
                 var that = this;
-                $('input', this.footer()).on('keyup change clear', function() {
+                $('input.dt-column-search', this.footer()).on('keyup change clear', function() {
                     if (that.search() !== this.value) that.search(this.value).draw();
                 });
+                $('select.dt-filter-select', this.footer()).on('change', function() {
+                    var val = $.fn.dataTable.util.escapeRegex($(this).val());
+                    that.search(val ? '^' + val + '$' : '', true, false).draw();
+                });
+            });
+
+            $('.dt-date-min, .dt-date-max').on('keyup change clear', function() {
+                table.draw();
             });
         });
     </script>

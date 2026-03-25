@@ -44,12 +44,36 @@
             <tfoot>
                 <tr>
                     <th>Produk</th>
-                    <th>Kategori</th>
+                    <th>
+                        <select class="dt-filter-select">
+                            <option value="">Semua</option>
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat->name }}">{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                    </th>
                     <th>SKU</th>
-                    <th>Stok</th>
-                    <th>Min. Stok</th>
+                    <th>
+                        <div class="dt-range-wrap">
+                            <input type="number" class="dt-range-min" placeholder="Min">
+                            <input type="number" class="dt-range-max" placeholder="Max">
+                        </div>
+                    </th>
+                    <th>
+                        <div class="dt-range-wrap">
+                            <input type="number" class="dt-range-min" placeholder="Min">
+                            <input type="number" class="dt-range-max" placeholder="Max">
+                        </div>
+                    </th>
                     <th>Satuan</th>
-                    <th>Status</th>
+                    <th>
+                        <select class="dt-filter-select">
+                            <option value="">Semua</option>
+                            <option value="Aman">Aman</option>
+                            <option value="Rendah">Rendah</option>
+                            <option value="Habis">Habis</option>
+                        </select>
+                    </th>
                 </tr>
             </tfoot>
         </table>
@@ -57,10 +81,30 @@
     @push('scripts')
     <script>
         $(document).ready(function() {
-            $('#stock-table tfoot th').each(function() {
+            $('#stock-table tfoot th').each(function(i) {
                 var title = $(this).text();
-                if (title) $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+                if (i === 0 || i === 2 || i === 5) {
+                    $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+                }
             });
+
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                if (settings.nTable.id !== 'stock-table') return true;
+                
+                var result = true;
+
+                // Stok Range (3) and Min Stok Range (4)
+                [3, 4].forEach(function(colIdx) {
+                    var min = parseInt($('#stock-table tfoot tr:eq(0) th:eq(' + colIdx + ') .dt-range-min').val(), 10);
+                    var max = parseInt($('#stock-table tfoot tr:eq(0) th:eq(' + colIdx + ') .dt-range-max').val(), 10);
+                    var val = parseFloat(data[colIdx]) || 0;
+                    if (!isNaN(min) && val < min) result = false;
+                    if (!isNaN(max) && val > max) result = false;
+                });
+
+                return result;
+            });
+
             var table = $('#stock-table').DataTable({
                 dom: 'Bfrtip',
                 buttons: [
@@ -71,12 +115,22 @@
                 language: { search: 'Cari:', lengthMenu: 'Tampilkan _MENU_ data', info: 'Menampilkan _START_ - _END_ dari _TOTAL_ produk', infoEmpty: 'Tidak ada data', zeroRecords: 'Tidak ditemukan', paginate: { previous: '‹', next: '›' } },
                 pageLength: 50,
                 order: [[3, 'asc']],
+                scrollX: true
             });
+
             table.columns().every(function() {
                 var that = this;
-                $('input', this.footer()).on('keyup change clear', function() {
+                $('input.dt-column-search', this.footer()).on('keyup change clear', function() {
                     if (that.search() !== this.value) that.search(this.value).draw();
                 });
+                $('select.dt-filter-select', this.footer()).on('change', function() {
+                    var val = $.fn.dataTable.util.escapeRegex($(this).val());
+                    that.search(val ? '^' + val + '$' : '', true, false).draw();
+                });
+            });
+
+            $('.dt-range-min, .dt-range-max').on('keyup change clear', function() {
+                table.draw();
             });
         });
     </script>

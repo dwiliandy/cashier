@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script>
@@ -35,21 +36,31 @@
         .dataTables_wrapper .dataTables_paginate .paginate_button{border-radius:0.5rem!important;border:1px solid #e5e7eb!important;margin:0 2px;font-size:0.8rem;padding:4px 10px!important;}
         .dataTables_wrapper .dataTables_paginate .paginate_button.current{background:linear-gradient(135deg,#6366f1,#7c3aed)!important;color:#fff!important;border-color:#6366f1!important;}
         .dataTables_wrapper .dataTables_paginate .paginate_button:hover{background:#eef2ff!important;color:#4f46e5!important;border-color:#c7d2fe!important;}
-        table.dataTable{border-collapse:collapse!important;}
-        table.dataTable thead th{background:#f9fafb;border-bottom:2px solid #e5e7eb!important;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;padding:0.75rem 1.25rem!important;}
-        table.dataTable tbody td{padding:0.75rem 1.25rem!important;border-bottom:1px solid #f3f4f6!important;font-size:0.875rem;}
+        table.dataTable{border-collapse:collapse!important;width:100%!important;}
+        table.dataTable thead th{background:#f9fafb;border-bottom:2px solid #e5e7eb!important;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;padding:0.75rem 1rem!important;white-space:nowrap;}
+        table.dataTable tbody td{padding:0.75rem 1rem!important;border-bottom:1px solid #f3f4f6!important;font-size:0.875rem;}
         table.dataTable tbody tr:hover{background:#f9fafb!important;}
         table.dataTable.no-footer{border-bottom:none!important;}
+        .dataTables_wrapper{overflow-x:auto;}
         .dt-buttons{margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;}
         .dt-buttons .dt-button{background:linear-gradient(135deg,#6366f1,#7c3aed)!important;color:#fff!important;border:none!important;border-radius:0.75rem!important;padding:0.5rem 1rem!important;font-size:0.8rem!important;font-weight:600;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 6px -1px rgba(99,102,241,0.3);}
         .dt-buttons .dt-button:hover{opacity:0.9;transform:translateY(-1px);}
         .dt-buttons .dt-button span{font-size:0.8rem!important;}
         .dataTables_wrapper .dataTables_length,.dataTables_wrapper .dataTables_filter{margin-bottom:1rem;}
         /* Per-column search inputs */
-        table.dataTable tfoot th{padding:0.5rem 0.75rem!important;background:#f9fafb;}
-        table.dataTable tfoot .dt-column-search{width:100%;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.35rem 0.6rem;font-size:0.75rem;outline:none;background:#fff;transition:all 0.2s;}
-        table.dataTable tfoot .dt-column-search:focus{border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,0.15);}
+        table.dataTable tfoot th{padding:0.4rem 0.5rem!important;background:#f9fafb;}
+        table.dataTable tfoot .dt-column-search,table.dataTable tfoot .dt-filter-select,table.dataTable tfoot .dt-filter-date{width:100%;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.3rem 0.5rem;font-size:0.7rem;outline:none;background:#fff;transition:all 0.2s;}
+        table.dataTable tfoot .dt-column-search:focus,table.dataTable tfoot .dt-filter-select:focus,table.dataTable tfoot .dt-filter-date:focus{border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,0.15);}
         table.dataTable tfoot .dt-column-search::placeholder{color:#9ca3af;}
+        table.dataTable tfoot .dt-range-wrap{display:flex;gap:2px;align-items:center;}
+        table.dataTable tfoot .dt-range-wrap input{width:50%;border:1px solid #d1d5db;border-radius:0.4rem;padding:0.25rem 0.35rem;font-size:0.65rem;outline:none;background:#fff;}
+        table.dataTable tfoot .dt-range-wrap input:focus{border-color:#6366f1;}
+        /* Select2 custom */
+        .select2-container--default .select2-selection--single{border:1px solid #d1d5db!important;border-radius:0.75rem!important;height:46px!important;padding:0.35rem 0.5rem;}
+        .select2-container--default .select2-selection--single .select2-selection__rendered{line-height:32px!important;font-size:0.875rem;}
+        .select2-container--default .select2-selection--single .select2-selection__arrow{height:44px!important;}
+        .select2-dropdown{border-radius:0.75rem!important;border:1px solid #d1d5db!important;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1)!important;}
+        .select2-results__option--highlighted{background:#6366f1!important;}
     </style>
     @stack('styles')
 </head>
@@ -91,6 +102,10 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                         Stok Batch
                     </a>
+                    <a href="{{ route('stock-adjustments.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('stock-adjustments.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                        Penyesuaian Stok
+                    </a>
                 @endif
                 <a href="{{ route('members.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('members.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -109,6 +124,10 @@
                     <a href="{{ route('reports.stock') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('reports.stock') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
                         Laporan Stok
+                    </a>
+                    <a href="{{ route('reports.adjustments') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all {{ request()->routeIs('reports.adjustments') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2a4 4 0 10-8 0v2m8-1a2 2 0 11-4 0 2 2 0 014 0zM19 13V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-2"></path></svg>
+                        Laporan Penyesuaian
                     </a>
                 @endif
                 @if(auth()->user()->role === 'owner')
@@ -186,6 +205,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         $.ajaxSetup({ headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')} });
 
@@ -203,6 +223,13 @@
         window.addEventListener('online', updateOnlineStatus);
         window.addEventListener('offline', updateOnlineStatus);
         updateOnlineStatus();
+
+        // Initialize Select2 globally
+        $(document).ready(function() {
+            $('.select2').select2({
+                width: '100%'
+            });
+        });
     </script>
     @stack('scripts')
 </body>

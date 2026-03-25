@@ -39,13 +39,29 @@
             <tfoot>
                 <tr>
                     <th>Invoice</th>
-                    <th>Tanggal</th>
+                    <th>
+                        <div class="dt-range-wrap">
+                            <input type="date" class="dt-date-min">
+                            <input type="date" class="dt-date-max">
+                        </div>
+                    </th>
                     <th>Kasir</th>
                     <th>Member</th>
                     <th>Subtotal</th>
                     <th>Diskon</th>
-                    <th>Total</th>
-                    <th>Metode</th>
+                    <th>
+                        <div class="dt-range-wrap">
+                            <input type="number" class="dt-range-min" placeholder="Min">
+                            <input type="number" class="dt-range-max" placeholder="Max">
+                        </div>
+                    </th>
+                    <th>
+                        <select class="dt-filter-select">
+                            <option value="">Semua</option>
+                            <option value="Tunai">Tunai</option>
+                            <option value="Midtrans">Midtrans</option>
+                        </select>
+                    </th>
                     <th></th>
                 </tr>
             </tfoot>
@@ -54,10 +70,39 @@
     @push('scripts')
     <script>
         $(document).ready(function() {
-            $('#transactions-table tfoot th').each(function() {
+            $('#transactions-table tfoot th').each(function(i) {
                 var title = $(this).text();
-                if (title) $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+                if (i === 0 || i === 2 || i === 3) {
+                    $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+                }
             });
+
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                if (settings.nTable.id !== 'transactions-table') return true;
+                
+                var result = true;
+
+                // Date Range (1)
+                var dMin = $('#transactions-table tfoot .dt-date-min').val();
+                var dMax = $('#transactions-table tfoot .dt-date-max').val();
+                var dValStr = data[1].split(' ')[0];
+                var parts = dValStr.split('/');
+                if (parts.length === 3) {
+                    var dVal = parts[2] + '-' + parts[1] + '-' + parts[0];
+                    if (dMin && dVal < dMin) result = false;
+                    if (dMax && dVal > dMax) result = false;
+                }
+
+                // Total Range (6)
+                var tMin = parseInt($('#transactions-table tfoot .dt-range-min').val(), 10);
+                var tMax = parseInt($('#transactions-table tfoot .dt-range-max').val(), 10);
+                var tVal = parseFloat(data[6].replace(/[^\d]/g, '')) || 0;
+                if (!isNaN(tMin) && tVal < tMin) result = false;
+                if (!isNaN(tMax) && tVal > tMax) result = false;
+
+                return result;
+            });
+
             var table = $('#transactions-table').DataTable({
                 dom: 'Bfrtip',
                 buttons: [
@@ -68,12 +113,22 @@
                 language: { search: 'Cari:', lengthMenu: 'Tampilkan _MENU_ data', info: 'Menampilkan _START_ - _END_ dari _TOTAL_ transaksi', infoEmpty: 'Tidak ada data', zeroRecords: 'Transaksi tidak ditemukan', paginate: { first: '«', last: '»', previous: '‹', next: '›' } },
                 pageLength: 25,
                 order: [[1, 'desc']],
+                scrollX: true
             });
+
             table.columns().every(function() {
                 var that = this;
-                $('input', this.footer()).on('keyup change clear', function() {
+                $('input.dt-column-search', this.footer()).on('keyup change clear', function() {
                     if (that.search() !== this.value) that.search(this.value).draw();
                 });
+                $('select.dt-filter-select', this.footer()).on('change', function() {
+                    var val = $.fn.dataTable.util.escapeRegex($(this).val());
+                    that.search(val ? '^' + val + '$' : '', true, false).draw();
+                });
+            });
+
+            $('.dt-range-min, .dt-range-max, .dt-date-min, .dt-date-max').on('keyup change clear', function() {
+                table.draw();
             });
         });
     </script>

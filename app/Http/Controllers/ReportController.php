@@ -20,6 +20,7 @@ class ReportController extends Controller
     {
         $products = \App\Models\Product::with('category')->orderBy('stock')->get();
         $lowStock = $products->filter(fn($p) => $p->isLowStock());
-        return view('reports.stock', compact('products', 'lowStock'));
+        $categories = \App\Models\Category::active()->get();
+        return view('reports.stock', compact('products', 'lowStock', 'categories'));
     }
 }

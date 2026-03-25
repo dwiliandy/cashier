@@ -1,7 +1,9 @@
 <?php
 namespace App\Http\Controllers;
 use App\Services\StockBatchService;
+use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class StockBatchController extends Controller
 {
@@ -48,5 +50,61 @@ class StockBatchController extends Controller
     {
         $this->batchService->delete($stockBatch);
         return back()->with('success', 'Batch berhasil dihapus!');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate(['file' => 'required|mimes:csv,txt']);
+
+        $file = $request->file('file');
+        $handle = fopen($file->getRealPath(), "r");
+        
+        // Skip header
+        $header = fgetcsv($handle, 1000, ",");
+        
+        $success = 0;
+        $errors = [];
+        $row = 1;
+
+        DB::beginTransaction();
+        try {
+            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                $row++;
+                if (count($data) < 3) continue;
+
+                $sku = $data[0];
+                $quantity = (int)$data[1];
+                $purchasePrice = (float)$data[2];
+                $supplier = $data[3] ?? null;
+                $expiryDate = !empty($data[4]) ? $data[4] : null;
+                $notes = $data[5] ?? null;
+
+                $product = Product::where('sku', $sku)->first();
+                if (!$product) {
+                    $errors[] = "Baris {$row}: SKU {$sku} tidak ditemukan.";
+                    continue;
+                }
+
+                $this->batchService->create($product->id, [
+                    'quantity' => $quantity,
+                    'purchase_price' => $purchasePrice,
+                    'supplier' => $supplier,
+                    'expiry_date' => $expiryDate,
+                    'notes' => $notes,
+                ]);
+                $success++;
+            }
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Terjadi kesalahan saat mengimpor: ' . $e->getMessage());
+        }
+        fclose($handle);
+
+        $msg = "Berhasil mengimpor {$success} batch.";
+        if (count($errors) > 0) {
+            return back()->with('success', $msg)->with('import_errors', $errors);
+        }
+        return back()->with('success', $msg);
     }
 }

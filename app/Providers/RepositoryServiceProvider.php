@@ -27,5 +27,9 @@ class RepositoryServiceProvider extends ServiceProvider
             \App\Repositories\Contracts\ActivityLogRepositoryInterface::class,
             \App\Repositories\ActivityLogRepository::class
         );
+        $this->app->bind(
+            \App\Repositories\Contracts\StockAdjustmentRepositoryInterface::class,
+            \App\Repositories\EloquentStockAdjustmentRepository::class
+        );
     }
 }

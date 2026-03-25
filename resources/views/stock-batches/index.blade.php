@@ -1,10 +1,27 @@
 <x-layouts.app title="Stok Batch">
     <div class="flex items-center justify-between mb-6">
         <div>
-            <h2 class="text-xl font-bold text-gray-900">Manajemen Stok Batch</h2>
+            <h2 class="text-xl font-bold text-gray-900">Stok Batch</h2>
             <p class="text-sm text-gray-500">Kelola penambahan stok per batch dengan harga beli</p>
         </div>
+        <div class="flex gap-2">
+            <button onclick="document.getElementById('importModal').classList.remove('hidden')" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 shadow-sm transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Import CSV
+            </button>
+        </div>
     </div>
+
+    @if(session('import_errors'))
+        <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl">
+            <h4 class="text-sm font-bold text-red-800 mb-2">Beberapa baris gagal diimpor:</h4>
+            <ul class="text-xs text-red-700 list-disc list-inside space-y-1">
+                @foreach(session('import_errors') as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {{-- Form Tambah Batch --}}
         <div class="bg-white rounded-2xl border border-gray-200 p-5">
@@ -13,7 +30,7 @@
                 @csrf
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Produk</label>
-                    <select name="product_id" required class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <select name="product_id" required class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none select2">
                         <option value="">Pilih produk...</option>
                         @foreach($products as $p)
                             <option value="{{ $p->id }}">{{ $p->name }} (Stok: {{ $p->stock }})</option>
@@ -95,13 +112,45 @@
                     <tfoot>
                         <tr>
                             <th>No. Batch</th>
-                            <th>Produk</th>
-                            <th>Qty Awal</th>
-                            <th>Sisa</th>
-                            <th>Harga Beli</th>
+                            <th>
+                                <select class="dt-filter-select">
+                                    <option value="">Semua Produk</option>
+                                    @foreach($products as $p)
+                                        <option value="{{ $p->name }}">{{ $p->name }}</option>
+                                    @endforeach
+                                </select>
+                            </th>
+                            <th>
+                                <div class="dt-range-wrap">
+                                    <input type="number" class="dt-range-min" placeholder="Min">
+                                    <input type="number" class="dt-range-max" placeholder="Max">
+                                </div>
+                            </th>
+                            <th>
+                                <div class="dt-range-wrap">
+                                    <input type="number" class="dt-range-min" placeholder="Min">
+                                    <input type="number" class="dt-range-max" placeholder="Max">
+                                </div>
+                            </th>
+                            <th>
+                                <div class="dt-range-wrap">
+                                    <input type="number" class="dt-range-min" placeholder="Min">
+                                    <input type="number" class="dt-range-max" placeholder="Max">
+                                </div>
+                            </th>
                             <th>Supplier</th>
-                            <th>Kedaluwarsa</th>
-                            <th>Dibuat</th>
+                            <th>
+                                <div class="dt-range-wrap">
+                                    <input type="date" class="dt-date-min">
+                                    <input type="date" class="dt-date-max">
+                                </div>
+                            </th>
+                            <th>
+                                <div class="dt-range-wrap">
+                                    <input type="date" class="dt-date-min">
+                                    <input type="date" class="dt-date-max">
+                                </div>
+                            </th>
                             <th></th>
                         </tr>
                     </tfoot>
@@ -113,10 +162,54 @@
     @push('scripts')
     <script>
         $(document).ready(function() {
-            $('#batches-table tfoot th').each(function() {
+            // Setup text search inputs
+            $('#batches-table tfoot th').each(function(i) {
                 var title = $(this).text();
-                if (title) $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+                if (i === 0 || i === 5) { // No. Batch and Supplier
+                    $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+                }
             });
+
+            // Range and Date filtering
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                var tableId = settings.nTable.id;
+                if (tableId !== 'batches-table') return true;
+
+                var result = true;
+
+                // Number ranges (2, 3, 4)
+                [2, 3, 4].forEach(function(colIdx) {
+                    var minInput = $('#batches-table tfoot tr:eq(0) th:eq(' + colIdx + ') .dt-range-min');
+                    var maxInput = $('#batches-table tfoot tr:eq(0) th:eq(' + colIdx + ') .dt-range-max');
+                    var min = parseInt(minInput.val(), 10);
+                    var max = parseInt(maxInput.val(), 10);
+                    var val = parseFloat(data[colIdx].replace(/[^\d]/g, '')) || 0;
+                    if (!isNaN(min) && val < min) result = false;
+                    if (!isNaN(max) && val > max) result = false;
+                });
+
+                // Date ranges (6, 7)
+                [6, 7].forEach(function(colIdx) {
+                    var minInput = $('#batches-table tfoot tr:eq(0) th:eq(' + colIdx + ') .dt-date-min');
+                    var maxInput = $('#batches-table tfoot tr:eq(0) th:eq(' + colIdx + ') .dt-date-max');
+                    var min = minInput.val();
+                    var max = maxInput.val();
+                    
+                    var dateStr = data[colIdx].split(' ')[0]; // Handle date or date-time
+                    if (!dateStr || dateStr === '-') return;
+                    
+                    // Convert dd/mm/yyyy to yyyy-mm-dd
+                    var parts = dateStr.split('/');
+                    if (parts.length === 3) {
+                        var valDate = parts[2] + '-' + parts[1] + '-' + parts[0];
+                        if (min && valDate < min) result = false;
+                        if (max && valDate > max) result = false;
+                    }
+                });
+
+                return result;
+            });
+
             var table = $('#batches-table').DataTable({
                 dom: 'Bfrtip',
                 buttons: [
@@ -127,14 +220,52 @@
                 language: { search: 'Cari:', lengthMenu: 'Tampilkan _MENU_ data', info: 'Menampilkan _START_ - _END_ dari _TOTAL_ batch', infoEmpty: 'Tidak ada data', zeroRecords: 'Batch tidak ditemukan', paginate: { first: '«', last: '»', previous: '‹', next: '›' } },
                 pageLength: 25,
                 order: [[7, 'desc']],
+                scrollX: true,
             });
+
             table.columns().every(function() {
                 var that = this;
-                $('input', this.footer()).on('keyup change clear', function() {
+                $('input.dt-column-search', this.footer()).on('keyup change clear', function() {
                     if (that.search() !== this.value) that.search(this.value).draw();
                 });
+                $('select.dt-filter-select', this.footer()).on('change', function() {
+                    var val = $.fn.dataTable.util.escapeRegex($(this).val());
+                    that.search(val ? '^' + val + '$' : '', true, false).draw();
+                });
+            });
+
+            $('.dt-range-min, .dt-range-max, .dt-date-min, .dt-date-max').on('keyup change clear', function() {
+                table.draw();
             });
         });
     </script>
     @endpush
+    <!-- Import Modal -->
+    <div id="importModal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+            <div class="bg-gray-50 px-8 py-6 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-900">Import Batch (CSV)</h3>
+                <button onclick="document.getElementById('importModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <form action="{{ route('stock-batches.import') }}" method="POST" enctype="multipart/form-data" class="p-8 space-y-6">
+                @csrf
+                <div class="space-y-4">
+                    <div class="p-4 bg-indigo-50 rounded-xl text-xs text-indigo-700 leading-relaxed">
+                        <strong>Format CSV:</strong><br>
+                        sku, quantity, purchase_price, supplier, expiry_date (Y-m-d), notes
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Pilih File CSV</label>
+                        <input type="file" name="file" accept=".csv" required class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 pt-4">
+                    <button type="button" onclick="document.getElementById('importModal').classList.add('hidden')" class="flex-1 py-3 rounded-xl text-center text-sm font-semibold text-gray-600 bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-all">Batal</button>
+                    <button type="submit" class="flex-1 py-3 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-all">Mulai Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </x-layouts.app>

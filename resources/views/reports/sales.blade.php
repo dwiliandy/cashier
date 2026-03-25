@@ -26,7 +26,16 @@
                         <tr><td class="text-gray-900">{{ $sp->product_name }}</td><td class="text-center">{{ $sp->total_qty }}</td><td class="text-right font-semibold text-gray-900">Rp {{ number_format($sp->total_revenue, 0, ',', '.') }}</td></tr>
                     @endforeach
                 </tbody>
-                <tfoot><tr><th>Produk</th><th>Qty</th><th>Revenue</th></tr></tfoot>
+                <tfoot><tr>
+                    <th>Produk</th>
+                    <th class="text-center">Qty</th>
+                    <th>
+                        <div class="dt-range-wrap">
+                            <input type="number" class="dt-range-min" placeholder="Min">
+                            <input type="number" class="dt-range-max" placeholder="Max">
+                        </div>
+                    </th>
+                </tr></tfoot>
             </table>
         </div>
         <div class="bg-white rounded-2xl border border-gray-200 p-5">
@@ -43,7 +52,22 @@
                         </tr>
                     @endforeach
                 </tbody>
-                <tfoot><tr><th>Invoice</th><th>Tanggal</th><th>Metode</th><th>Total</th></tr></tfoot>
+                <tfoot><tr>
+                    <th>Invoice</th>
+                    <th>
+                        <div class="dt-range-wrap">
+                            <input type="date" class="dt-date-min">
+                            <input type="date" class="dt-date-max">
+                        </div>
+                    </th>
+                    <th>Metode</th>
+                    <th>
+                        <div class="dt-range-wrap">
+                            <input type="number" class="dt-range-min" placeholder="Min">
+                            <input type="number" class="dt-range-max" placeholder="Max">
+                        </div>
+                    </th>
+                </tr></tfoot>
             </table>
         </div>
     </div>
@@ -64,7 +88,41 @@
                 dom: 'Bfrtip',
                 language: { search:'Cari:', info:'_START_-_END_ / _TOTAL_', infoEmpty:'Kosong', zeroRecords:'Tidak ditemukan', paginate:{previous:'‹',next:'›'} },
                 pageLength: 25,
+                scrollX: true
             };
+
+            // Custom Range Filters for Sales
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                var tableId = settings.nTable.id;
+                
+                if (tableId === 'sales-product-table') {
+                    var min = parseInt($('#sales-product-table tfoot .dt-range-min').val(), 10);
+                    var max = parseInt($('#sales-product-table tfoot .dt-range-max').val(), 10);
+                    var val = parseFloat(data[2].replace(/[^\d]/g, '')) || 0;
+                    if (!isNaN(min) && val < min) return false;
+                    if (!isNaN(max) && val > max) return false;
+                }
+
+                if (tableId === 'sales-tx-table') {
+                    // Date range (1)
+                    var dMin = $('#sales-tx-table tfoot .dt-date-min').val();
+                    var dMax = $('#sales-tx-table tfoot .dt-date-max').val();
+                    var parts = data[1].split(' ')[0].split('/');
+                    if (parts.length === 3) {
+                        var dVal = parts[2] + '-' + parts[1] + '-' + parts[0];
+                        if (dMin && dVal < dMin) return false;
+                        if (dMax && dVal > dMax) return false;
+                    }
+                    // Total range (3)
+                    var tMin = parseInt($('#sales-tx-table tfoot .dt-range-min').val(), 10);
+                    var tMax = parseInt($('#sales-tx-table tfoot .dt-range-max').val(), 10);
+                    var tVal = parseFloat(data[3].replace(/[^\d]/g, '')) || 0;
+                    if (!isNaN(tMin) && tVal < tMin) return false;
+                    if (!isNaN(tMax) && tVal > tMax) return false;
+                }
+
+                return true;
+            });
 
             var t1 = $('#sales-product-table').DataTable({...dtOpts, buttons: [{extend:'excelHtml5',text:'📊 Excel',title:'Penjualan Per Produk'},{extend:'pdfHtml5',text:'📄 PDF',title:'Penjualan Per Produk'},{extend:'print',text:'🖨 Cetak',title:'Penjualan Per Produk'}], order:[[2,'desc']]});
             var t2 = $('#sales-tx-table').DataTable({...dtOpts, buttons: [{extend:'excelHtml5',text:'📊 Excel',title:'Daftar Transaksi'},{extend:'pdfHtml5',text:'📄 PDF',title:'Daftar Transaksi'},{extend:'print',text:'🖨 Cetak',title:'Daftar Transaksi'}], order:[[1,'desc']]});

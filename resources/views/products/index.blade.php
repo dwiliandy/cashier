@@ -73,11 +73,39 @@
                 <tr>
                     <th>Produk</th>
                     <th>SKU</th>
-                    <th>Kategori</th>
-                    <th>Harga Beli</th>
-                    <th>Harga Jual</th>
-                    <th>Stok</th>
-                    <th>Status</th>
+                    <th>
+                        <select class="dt-filter-select">
+                            <option value="">Semua Kategori</option>
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat->name }}">{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                    </th>
+                    <th>
+                        <div class="dt-range-wrap">
+                            <input type="number" class="dt-range-min" placeholder="Min">
+                            <input type="number" class="dt-range-max" placeholder="Max">
+                        </div>
+                    </th>
+                    <th>
+                        <div class="dt-range-wrap">
+                            <input type="number" class="dt-range-min" placeholder="Min">
+                            <input type="number" class="dt-range-max" placeholder="Max">
+                        </div>
+                    </th>
+                    <th>
+                        <div class="dt-range-wrap">
+                            <input type="number" class="dt-range-min" placeholder="Min">
+                            <input type="number" class="dt-range-max" placeholder="Max">
+                        </div>
+                    </th>
+                    <th>
+                        <select class="dt-filter-select">
+                            <option value="">Semua Status</option>
+                            <option value="Aktif">Aktif</option>
+                            <option value="Nonaktif">Nonaktif</option>
+                        </select>
+                    </th>
                     <th></th>
                 </tr>
             </tfoot>
@@ -87,11 +115,40 @@
     @push('scripts')
     <script>
         $(document).ready(function() {
-            // Setup column search inputs
-            $('#products-table tfoot th').each(function() {
+            // Setup text search inputs for specific columns
+            $('#products-table tfoot th').each(function(i) {
                 var title = $(this).text();
-                if (title) $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+                if (i <= 1) { // Produk and SKU
+                    $(this).html('<input type="text" class="dt-column-search" placeholder="Cari ' + title + '..." />');
+                }
             });
+
+            // Custom filtering function for ranges
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                var tableId = settings.nTable.id;
+                if (tableId !== 'products-table') return true;
+
+                var result = true;
+
+                // Price/Stock Range columns (3, 4, 5)
+                [3, 4, 5].forEach(function(colIdx) {
+                    var minInput = $('#products-table tfoot tr:eq(0) th:eq(' + colIdx + ') .dt-range-min');
+                    var maxInput = $('#products-table tfoot tr:eq(0) th:eq(' + colIdx + ') .dt-range-max');
+                    
+                    var min = parseInt(minInput.val(), 10);
+                    var max = parseInt(maxInput.val(), 10);
+                    
+                    // Clean price data (remove "Rp" and ".")
+                    var rawValue = data[colIdx].replace(/[^\d]/g, '');
+                    var val = parseFloat(rawValue) || 0;
+
+                    if (!isNaN(min) && val < min) result = false;
+                    if (!isNaN(max) && val > max) result = false;
+                });
+
+                return result;
+            });
+
             var table = $('#products-table').DataTable({
                 dom: 'Bfrtip',
                 buttons: [
@@ -102,13 +159,28 @@
                 language: { search: 'Cari:', lengthMenu: 'Tampilkan _MENU_ data', info: 'Menampilkan _START_ - _END_ dari _TOTAL_ produk', infoEmpty: 'Tidak ada data', zeroRecords: 'Produk tidak ditemukan', paginate: { first: '«', last: '»', previous: '‹', next: '›' } },
                 pageLength: 25,
                 order: [[0, 'asc']],
+                scrollX: true, // Enable horizontal scroll for overflow fix
             });
-            // Per-column search
+
+            // Per-column search (Text and Dropdown)
             table.columns().every(function() {
                 var that = this;
-                $('input', this.footer()).on('keyup change clear', function() {
+                
+                // Text search
+                $('input.dt-column-search', this.footer()).on('keyup change clear', function() {
                     if (that.search() !== this.value) that.search(this.value).draw();
                 });
+
+                // Dropdown search
+                $('select.dt-filter-select', this.footer()).on('change', function() {
+                    var val = $.fn.dataTable.util.escapeRegex($(this).val());
+                    that.search(val ? '^' + val + '$' : '', true, false).draw();
+                });
+            });
+
+            // Range search trigger
+            $('.dt-range-min, .dt-range-max').on('keyup change clear', function() {
+                table.draw();
             });
         });
     </script>
